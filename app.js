@@ -18,7 +18,7 @@ import { generateSpotifyRefreshToken } from "./src/controllers/adminController.j
 dotenv.config();
 connectDB();
 
-const PORT = 5000;
+const PORT = process.env.PORT || 5001;
 const app = express();
 app.set('views', './src/views');
 app.set('view engine', 'ejs');
@@ -55,23 +55,23 @@ app.use("/api/users", userRoute);
 app.use("/admin", adminRoute);
 const getToken = async() => {
   // app.locals.spotifyToken = 'BQCaNQqHbgDBW00BZd-IO_pUAwQMoG73HVMBQokEt86sPUmZLa0_CaqRN4cbl2BG6uj3AUzx8wo8rdKBVYOZYYI0o-KGHBnWUY3OzEVQoxOeztumB_g'
-  let tokenData = await fetch("http://localhost:5000/admin/refreshtoken")
+  let tokenData = await fetch("http://localhost:5001/admin/refreshtoken")
   let token = await tokenData.json();
   if (token.success) {
     app.locals.spotifyToken = token.token.access_token
     updateCount();
   } else{
-    setTimeout(() => {getToken()}, 5000)
+    setTimeout(() => {getToken()}, 5001)
   }
 }
 
 const updateCount = async() => {
-  let countData = await fetch("http://localhost:5000/admin/count")
+  let countData = await fetch("http://localhost:5001/admin/count")
   let count = await countData.json();
   if (count.success) {
     console.log(count.data)
   } else {
-    setTimeout(() => {updateCount()}, 5000)
+    setTimeout(() => {updateCount()}, 5001)
   }
 }
 
