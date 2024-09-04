@@ -75,7 +75,7 @@ const categories = async (req, res, next) => {
   let cat_data = [];
   let categories_with_authors = await Promise.all(categories.map(async(e, i) => {
     let data = {...e._doc}
-    const sdata = await fetch(`https://api.spotify.com/v1/search?query=Telugu+Tamil+English+Hindi+${e.keywords.split(' ').join('+')}&type=show&include_external=audio&market=IN&locale=en-US%2Cen%3Bq%3D0.9&offset=0&limit=50`, headers);
+    const sdata = await fetch(`https://api.spotify.com/v1/search?query=Telugu+Tamil+English+Hindi+${e.keywords.split('').join('+')}&type=show&include_external=audio&market=IN&locale=en-US%2Cen%3Bq%3D0.9&offset=0&limit=50`, headers);
     const edata = await sdata.json()
     const author_count = edata.shows.items.map((e) => {return {author: e?.publisher, count: e?.total_episodes}})//.filter((a) => a?.publisher !== undefined)
     data = {...data, authors: author_count}
@@ -206,28 +206,31 @@ const updateCount = async (req, res, next) => {
     let ctotal_shows = 0;
     let shows = [];
     await Promise.all(categories.map(async(category) => {
-      let keyword = category.keywords.replaceAll(' ', '+');
-      let data = await fetch(`https://api.spotify.com/v1/search?q=${keyword}&type=show,episode&market=IN&limit=50&offset=0&include_external=audio`, headers);
+      if (category.keywords) {  // Check if keywords is defined
+        let keyword = category.keywords.replaceAll(' ', '+');
+        let data = await fetch(`https://api.spotify.com/v1/search?q=${keyword}&type=show,episode&market=IN&limit=50&offset=0&include_external=audio`, headers);
         let author_data = await data.json();
-        if(author_data.error) { throw author_data.error}
+        if(author_data.error) { throw author_data.error }
         let total_shows = author_data.shows.total;
-        let asdf = await Category.findOneAndUpdate({keywords: category.keywords}, {count: total_shows, updated_at: new Date()});
-    }))
+        await Category.findOneAndUpdate({keywords: category.keywords}, {count: total_shows, updated_at: new Date()});
+      } else {
+        console.log(`Category with ID ${category._id} has undefined keywords.`);
+      }
+    }));
     do {
-    let data = await fetch(`https://api.spotify.com/v1/browse/categories?locale=en-US%2Cen%3Bq%3D0.9&limit=50&offset=${offset}`, headers);
+      let data = await fetch(`https://api.spotify.com/v1/browse/categories?locale=en-US%2Cen%3Bq%3D0.9&limit=50&offset=${offset}`, headers);
       let author_data = await data.json();
-      if(author_data.error) { throw author_data.error}
+      if(author_data.error) { throw author_data.error }
       ctotal_shows = author_data.categories.total;
       offset += 50;
       shows.push(author_data.categories?.items?.map(e => e?.name)?.filter(e => e))
-    }
-    while(offset < ctotal_shows)
+    } while(offset < ctotal_shows)
     let final_shows = [...new Set(shows.flat(3))].length;
     await WeeklyCount.findOneAndUpdate({}, {categories: final_shows, updated_at: new Date()}, {upsert: true});
     const all_authors = await getAuthors(headers);
-    return res.status(200).json({ data: {authors: all_authors, categories: final_shows}, success: true })
+    return res.status(200).json({ data: {authors: all_authors, categories: final_shows}, success: true });
   } catch (error) {
-    console.log(error)
+    console.log(error);
     return res.status(400).json({ message: error, success: false });
   }
 };
